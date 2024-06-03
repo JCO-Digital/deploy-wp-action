@@ -38,6 +38,8 @@ on:
         required: true
       COMPOSER_AUTH:
         required: true
+      VC_HOSTS:
+        required: true
 
 jobs:
   deploy:
