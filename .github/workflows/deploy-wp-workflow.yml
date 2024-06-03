@@ -3,22 +3,18 @@ on:
     inputs:
       php_version:
         description: 'PHP version to use'
-        required: true
         default: '8.2'
         type: string
       deploy_vendor:
         description: 'Deploy vendor folder'
-        required: true
         default: true
         type: boolean
       deploy_plugins:
         description: 'Deploy plugins folder'
-        required: true
         default: false
         type: boolean
       is_jcore2:
         description: 'Is JCORE2 theme'
-        required: true
         default: false
         type: boolean
       server_url:
