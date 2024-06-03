@@ -1,0 +1,116 @@
+on:
+  workflow_call:
+    inputs:
+      php_version:
+        description: 'PHP version to use'
+        required: true
+        default: '8.2'
+        type: string
+      deploy_vendor:
+        description: 'Deploy vendor folder'
+        required: true
+        default: true
+        type: boolean
+      deploy_plugins:
+        description: 'Deploy plugins folder'
+        required: true
+        default: false
+        type: boolean
+      is_jcore2:
+        description: 'Is JCORE2 theme'
+        required: true
+        default: false
+        type: boolean
+      server_url:
+        description: 'Server URL'
+        required: true
+        type: string
+      base_path:
+        description: 'Base path'
+        required: true
+        type: string
+      theme_name:
+        description: 'Theme name'
+        required: true
+        type: string
+    secrets:
+      SSH_GITHUB_KEY:
+        required: true
+      COMPOSER_AUTH:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy site
+    runs-on: [self-hosted]
+    env:
+      SERVER_URL: ${{ inputs.server_url }}:${{ inputs.base_path }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_GITHUB_KEY }}
+          name: id_ed25519
+          known_hosts: ${{ secrets.VC_HOSTS }}
+
+      - name: Add Bitbucket Known Hosts
+        run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
+
+      - name: Add Bitbucket Known Hosts
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_GITHUB_KEY }}
+          name: id_ed25519_bitbucket
+          known_hosts: ${{ env.BITBUCKET_KNOWN_HOSTS }}
+
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v2
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Setup PHP with tools
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Make
+        run: make
+        env:
+          COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+
+      - name: Deploy Vendor
+        if: ${{ inputs.deploy_vendor }}
+        run: rsync -rlci --delete vendor ${{ env.SERVER_URL }}
+
+      - name: Deploy Plugins
+        if: ${{ inputs.deploy_plugins }}
+        run: rsync -rlci --delete wp-content/plugins/ ${{ env.SERVER_URL }}/wp-content/plugins/
+
+      - name: Deploy Theme
+        run: rsync -rlci --delete --exclude=node_modules wp-content/themes/${{ inputs.theme_name }} ${{ env.SERVER_URL }}/wp-content/themes/
+
+      - name: Deploy JCORE2
+        if: ${{ inputs.is_jcore2 }}
+        run: rsync -rlci --delete --exclude=node_modules wp-content/themes/jcore2 ${{ env.SERVER_URL }}/wp-content/themes/
