@@ -56,9 +56,11 @@ jobs:
           known_hosts: ${{ secrets.VC_HOSTS }}
 
       - name: Add Bitbucket Known Hosts
+        if: ${{ inputs.is_jcore2 }}
         run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
 
-      - name: Add Bitbucket Known Hosts
+      - name: Install Bitbucket Key
+        if: ${{ inputs.is_jcore2 }}
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
