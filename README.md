@@ -13,9 +13,6 @@ on:
     branch:
       - main
 
-env:
-  SERVER_URL: 'game@vanillacitadel.bojaco.com:/sites/game.jquest.fi/files'
-
 jobs:
   deploy:
     uses: jco-digital/deploy-wp-action/.github/workflows/deploy-wp-workflow.yml@main
