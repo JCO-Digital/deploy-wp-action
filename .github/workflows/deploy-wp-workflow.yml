@@ -100,7 +100,7 @@ jobs:
           tools: composer:v2
 
       - name: Make
-        run: make
+        run: make ci
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
 
