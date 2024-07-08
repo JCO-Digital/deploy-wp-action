@@ -5,6 +5,10 @@ on:
         description: 'PHP version to use'
         default: '8.2'
         type: string
+      node_version:
+        description: 'Node version to use'
+        default: '20'
+        type: string
       deploy_vendor:
         description: 'Deploy vendor folder'
         default: true
@@ -56,9 +60,11 @@ jobs:
           known_hosts: ${{ secrets.VC_HOSTS }}
 
       - name: Add Bitbucket Known Hosts
+        if: ${{ inputs.is_jcore2 }}
         run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
 
-      - name: Add Bitbucket Known Hosts
+      - name: Install Bitbucket Key
+        if: ${{ inputs.is_jcore2 }}
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
@@ -70,7 +76,7 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: ${{ inputs.node_version }}
 
       - uses: pnpm/action-setup@v2
 
@@ -90,11 +96,11 @@ jobs:
       - name: Setup PHP with tools
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: ${{ inputs.php_version }}
           tools: composer:v2
 
       - name: Make
-        run: make
+        run: make ci
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
 
