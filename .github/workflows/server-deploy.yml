@@ -1,0 +1,164 @@
+on:
+  workflow_call:
+    inputs:
+      server_url:
+        required: true
+        type: string
+      base_path:
+        required: true
+        type: string
+      paths:
+        required: true
+        type: string
+      exclude:
+        default: "{'node_modules','.git','.github','.env'}"
+        type: string
+      known_hosts:
+        required: true
+        type: string
+      slack_channel:
+        description: 'Slack channel ID to post notifications to'
+        default: ''
+        type: string
+    secrets:
+      SSH_GITHUB_KEY:
+        required: true
+      SLACK_BOT_TOKEN:
+        required: false
+
+jobs:
+  deploy:
+    runs-on: [ self-hosted ]
+    env:
+      EXCLUDE: ${{ inputs.exclude }}
+    steps:
+      - id: slack
+        if: ${{ inputs.slack_channel != '' }}
+        name: Slack notification (start)
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          # The following message update step does not accept a channel name.
+          # Setting a channel ID here for consistency is highly recommended.
+          channel-id: ${{ inputs.slack_channel }}
+          payload: |
+            {
+              "text": ":construction_worker: Project deployment started",
+              "attachments": [
+                {
+                  "pretext": ":airplane_departure: Deploying...",
+                  "color": "dbab09",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "In Progress"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_GITHUB_KEY }}
+          name: id_ed25519
+          known_hosts: ${{ inputs.known_hosts }}
+
+      # This will parse the paths "local:remote,local:remote" and create a matrix of paths to deploy
+      # Preceding slashes are added to the remote path if they don't exist
+      - name: Parse paths
+        id: parse-paths
+        run: |
+          IFS=',' read -r -a paths <<< "${{ inputs.paths }}";
+          for path in "${paths[@]}"; do
+            IFS=':' read -r -a path <<< "$path";
+            if [[ ${path[1]} != /* ]]; then
+              path[1]="/${path[1]}"
+            fi
+            if [[ ${path[0]} == /* ]]; then
+              path[0]="${path[0]#*/}"
+            fi
+            final_paths+=("${path[0]}:${path[1]}")
+          done
+          echo "DEPLOY_PATHS=${final_paths[*]}" >> $GITHUB_ENV
+
+      # We need to set the server url to the base path
+      # We add a preceding slash to the base path if it doesn't exist
+      # And we add a trailing slash to the base path if it doesn't exist
+      - name: Set server url
+        run: |
+          base_path="${{ inputs.base_path }}"
+          base_path="${base_path#/}"
+          base_path="/${base_path}"
+          base_path="${base_path%/}"
+          echo "SERVER_URL=${{ inputs.server_url }}:${base_path}" >> $GITHUB_ENV
+
+      # We deploy the files defined in the paths
+      - name: Deploy files
+        run: |
+          for path in $DEPLOY_PATHS; do
+            IFS=':' read -r -a path <<< "$path";
+            echo "Deploying ${path[0]} to ${path[1]}";
+            rsync -rlci --verbose --delete --exclude=${{ env.EXCLUDE }} ${path[0]} ${{ env.SERVER_URL }}${path[1]};
+          done;
+        env:
+          DEPLOY_PATHS: ${{ env.DEPLOY_PATHS }}
+
+      - uses: slackapi/slack-github-action@v1.26.0
+        name: Slack notification (success)
+        if: ${{ success() && inputs.slack_channel != '' }}
+        with:
+          # Unlike the step posting a new message, this step does not accept a channel name.
+          # Please use a channel ID, not a name here.
+          channel-id: ${{ inputs.slack_channel }}
+          update-ts: ${{ steps.slack.outputs.ts }}
+          payload: |
+            {
+              "text": ":white_check_mark: Deployment finished",
+              "attachments": [
+                {
+                  "pretext": ":airplane_arriving: Finished deploying",
+                  "color": "28a745",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "Completed"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - uses: slackapi/slack-github-action@v1.26.0
+        name: Slack notification (failure)
+        if: ${{ failure() && inputs.slack_channel != '' }}
+        with:
+          # Unlike the step posting a new message, this step does not accept a channel name.
+          # Please use a channel ID, not a name here.
+          channel-id: ${{ inputs.slack_channel }}
+          update-ts: ${{ steps.slack.outputs.ts }}
+          payload: |
+            {
+              "text": ":x: Project deployment failed",
+              "attachments": [
+                {
+                  "pretext": ":fire: Failed to deploy",
+                  "color": "e11d21",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "Failed"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

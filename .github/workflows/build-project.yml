@@ -1,0 +1,172 @@
+on:
+  workflow_call:
+    inputs:
+      php_version:
+        description: 'PHP version to use'
+        default: '8.2'
+        type: string
+      node_version:
+        description: 'Node version to use'
+        default: '20'
+        type: string
+      is_jcore2:
+        description: 'Is JCORE2 theme'
+        default: false
+        type: boolean
+      composer_version:
+        description: 'Composer version'
+        default: 'v2'
+        type: string
+      fetch_submodules:
+        description: 'Should submodules be fetched'
+        default: false
+        type: boolean
+      slack_channel:
+        description: 'Slack channel ID to post notifications to'
+        default: ''
+        type: string
+    secrets:
+      SSH_GITHUB_KEY:
+        required: true
+      COMPOSER_AUTH:
+        required: true
+      SLACK_BOT_TOKEN:
+        required: false
+
+jobs:
+  build:
+    runs-on: [ self-hosted ]
+    steps:
+      - id: slack
+        if: ${{ inputs.slack_channel != '' }}
+        name: Slack notification (start)
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          # The following message update step does not accept a channel name.
+          # Setting a channel ID here for consistency is highly recommended.
+          channel-id: ${{ inputs.slack_channel }}
+          payload: |
+            {
+              "text": ":construction_worker: Project build started",
+              "attachments": [
+                {
+                  "pretext": ":hammer: Building...",
+                  "color": "dbab09",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "In Progress"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.fetch_submodules && ! inputs.is_jcore2 }}
+
+      - name: Add Bitbucket Known Hosts
+        if: ${{ inputs.is_jcore2 }}
+        run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
+
+      - name: Install Bitbucket Key
+        if: ${{ inputs.is_jcore2 }}
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_GITHUB_KEY }}
+          name: id_ed25519
+          known_hosts: ${{ env.BITBUCKET_KNOWN_HOSTS }}
+
+      - name: Fetch submodules
+        if: ${{ inputs.is_jcore2 }}
+        run: git submodule update --init --recursive
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - uses: pnpm/action-setup@v2
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Setup PHP with tools
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          tools: composer:${{ inputs.composer_version }}
+
+      - name: Make
+        run: make ci
+        env:
+          COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+
+      - uses: slackapi/slack-github-action@v1.26.0
+        name: Slack notification (success)
+        if: ${{ success() && inputs.slack_channel != '' }}
+        with:
+          # Unlike the step posting a new message, this step does not accept a channel name.
+          # Please use a channel ID, not a name here.
+          channel-id: ${{ inputs.slack_channel }}
+          update-ts: ${{ steps.slack.outputs.ts }}
+          payload: |
+            {
+              "text": ":white_check_mark: Build finished",
+              "attachments": [
+                {
+                  "pretext": ":house_with_garden: Finished building",
+                  "color": "28a745",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "Completed"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - uses: slackapi/slack-github-action@v1.26.0
+        name: Slack notification (failure)
+        if: ${{ failure() && inputs.slack_channel != '' }}
+        with:
+          # Unlike the step posting a new message, this step does not accept a channel name.
+          # Please use a channel ID, not a name here.
+          channel-id: ${{ inputs.slack_channel }}
+          update-ts: ${{ steps.slack.outputs.ts }}
+          payload: |
+            {
+              "text": ":x: Build failed",
+              "attachments": [
+                {
+                  "pretext": ":fire: Failed to build",
+                  "color": "e11d21",
+                  "fields": [
+                    {
+                      "title": "Status",
+                      "short": true,
+                      "value": "Failed"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
