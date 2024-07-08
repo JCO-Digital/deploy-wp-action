@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       exclude:
-        default: "{'node_modules','.git','.github','.env'}"
+        default: "{'node_modules','.git','.github','.env','.idea','.vscode','.DS_Store'}"
         type: string
       known_hosts:
         required: true
