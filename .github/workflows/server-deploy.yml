@@ -17,8 +17,8 @@ on:
         required: true
         type: string
       slack_channel:
-        description: 'Slack channel ID to post notifications to'
-        default: ''
+        description: "Slack channel ID to post notifications to"
+        default: ""
         type: string
     secrets:
       SSH_GITHUB_KEY:
@@ -28,7 +28,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [ self-hosted ]
+    runs-on: [self-hosted]
     env:
       EXCLUDE: ${{ inputs.exclude }}
     steps:
@@ -86,13 +86,11 @@ jobs:
           echo "DEPLOY_PATHS=${final_paths[*]}" >> $GITHUB_ENV
 
       # We need to set the server url to the base path
-      # We add a preceding slash to the base path if it doesn't exist
-      # And we add a trailing slash to the base path if it doesn't exist
+      # Preserve preceding (or lack of) slash to allow for absolute or relative paths.
+      # Remove trailing slash, because leading slashes are added to deploy paths.
       - name: Set server url
         run: |
           base_path="${{ inputs.base_path }}"
-          base_path="${base_path#/}"
-          base_path="/${base_path}"
           base_path="${base_path%/}"
           echo "SERVER_URL=${{ inputs.server_url }}:${base_path}" >> $GITHUB_ENV
 
