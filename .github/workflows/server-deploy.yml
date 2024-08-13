@@ -28,7 +28,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Linux, X64]
     env:
       EXCLUDE: ${{ inputs.exclude }}
     steps:
