@@ -23,8 +23,8 @@ on:
         type: boolean
       platform:
         description: "What platform should the action run on"
-        default: "self-hosted"
-        type: string
+        default: [self-hosted, Linux, X64]
+        type: array
       slack_channel:
         description: "Slack channel ID to post notifications to"
         default: ""
@@ -39,7 +39,7 @@ on:
 
 jobs:
   build:
-    runs-on: [${{ inputs.platform }}, Linux, X64]
+    runs-on: ${{ inputs.platform }}
     steps:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
