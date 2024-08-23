@@ -2,28 +2,32 @@ on:
   workflow_call:
     inputs:
       php_version:
-        description: 'PHP version to use'
-        default: '8.2'
+        description: "PHP version to use"
+        default: "8.2"
         type: string
       node_version:
-        description: 'Node version to use'
-        default: '20'
+        description: "Node version to use"
+        default: "20"
         type: string
       is_jcore2:
-        description: 'Is JCORE2 theme'
+        description: "Is JCORE2 theme"
         default: false
         type: boolean
       composer_version:
-        description: 'Composer version'
-        default: 'v2'
+        description: "Composer version"
+        default: "v2"
         type: string
       fetch_submodules:
-        description: 'Should submodules be fetched'
+        description: "Should submodules be fetched"
         default: false
         type: boolean
+      platform:
+        description: "What platform should the action run on"
+        default: "self-hosted"
+        type: string
       slack_channel:
-        description: 'Slack channel ID to post notifications to'
-        default: ''
+        description: "Slack channel ID to post notifications to"
+        default: ""
         type: string
     secrets:
       SSH_GITHUB_KEY:
@@ -35,7 +39,7 @@ on:
 
 jobs:
   build:
-    runs-on: [ self-hosted, Linux, X64 ]
+    runs-on: [${{ inputs.platform }}, Linux, X64]
     steps:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
