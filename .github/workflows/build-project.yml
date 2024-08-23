@@ -39,7 +39,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ${{ inputs.platform }}
     steps:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
