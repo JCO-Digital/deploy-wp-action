@@ -23,8 +23,8 @@ on:
         type: boolean
       platform:
         description: "What platform should the action run on"
-        default: [self-hosted, Linux, X64]
-        type: array
+        default: "self-hosted"
+        type: string
       slack_channel:
         description: "Slack channel ID to post notifications to"
         default: ""
