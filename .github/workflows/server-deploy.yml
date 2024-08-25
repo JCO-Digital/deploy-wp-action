@@ -13,9 +13,6 @@ on:
       exclude:
         default: "{'node_modules','.git','.github','.env','.idea','.vscode','.DS_Store'}"
         type: string
-      known_hosts:
-        required: true
-        type: string
       platform:
         description: "What platform should the action run on"
         default: "self-hosted"
@@ -30,6 +27,8 @@ on:
         type: string
     secrets:
       SSH_GITHUB_KEY:
+        required: true
+      SSH_KNOWN_HOSTS:
         required: true
       SLACK_BOT_TOKEN:
         required: false
@@ -78,7 +77,7 @@ jobs:
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
           name: id_ed25519
-          known_hosts: ${{ inputs.known_hosts }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       # This will parse the paths "local:remote,local:remote" and create a matrix of paths to deploy
       # Preceding slashes are added to the remote path if they don't exist
