@@ -16,6 +16,14 @@ on:
       known_hosts:
         required: true
         type: string
+      platform:
+        description: "What platform should the action run on"
+        default: "self-hosted"
+        type: string
+      artifact:
+        description: "Name of the artifact"
+        default: "build_files"
+        type: string
       slack_channel:
         description: "Slack channel ID to post notifications to"
         default: ""
@@ -28,7 +36,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ${{ inputs.platform }}
     env:
       EXCLUDE: ${{ inputs.exclude }}
     steps:
@@ -59,6 +67,11 @@ jobs:
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Download build files
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
