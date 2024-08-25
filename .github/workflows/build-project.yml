@@ -119,6 +119,17 @@ jobs:
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
 
+      - name: Upload built files
+        uses: actions/upload-artifact@v4
+        with:
+          name: build_files
+          path: |
+            .
+            !node_modules
+            !.git*
+            !**/node_modules
+          retention-days: 1
+
       - uses: slackapi/slack-github-action@v1.26.0
         name: Slack notification (success)
         if: ${{ success() && inputs.slack_channel != '' }}
