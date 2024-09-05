@@ -15,7 +15,7 @@ on:
         type: string
       platform:
         description: "What platform should the action run on"
-        default: "self-hosted"
+        default: "ubuntu-latest"
         type: string
       artifact:
         description: "Name of the artifact"
