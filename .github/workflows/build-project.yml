@@ -55,7 +55,7 @@ jobs:
           channel-id: ${{ inputs.slack_channel }}
           payload: |
             {
-              "text": ":construction_worker: Project ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} started.",
+              "text": ":construction_worker: ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} started.",
               "attachments": [
                 {
                   "pretext": ":hammer: Building...",
@@ -144,7 +144,7 @@ jobs:
           update-ts: ${{ steps.slack.outputs.ts }}
           payload: |
             {
-              "text": ":white_check_mark: Project ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} finished.",
+              "text": ":white_check_mark: ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} finished.",
               "attachments": [
                 {
                   "pretext": ":house_with_garden: Finished building",
@@ -172,7 +172,7 @@ jobs:
           update-ts: ${{ steps.slack.outputs.ts }}
           payload: |
             {
-              "text": ":x: Project ${{ github.repository }} build ${{ github.ref_name }} started by ${{ github.actor }} failed!",
+              "text": ":x: ${{ github.repository }} build ${{ github.ref_name }} started by ${{ github.actor }} failed!",
               "attachments": [
                 {
                   "pretext": ":fire: Failed to build",

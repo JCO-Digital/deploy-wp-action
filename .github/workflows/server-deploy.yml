@@ -49,7 +49,7 @@ jobs:
           channel-id: ${{ inputs.slack_channel }}
           payload: |
             {
-              "text": ":construction_worker: Project deployment started",
+              "text": ":construction_worker: ${{ github.repository }} deployment ${{ github.ref_name }} to ${{ inputs.server_url }} started.",
               "attachments": [
                 {
                   "pretext": ":airplane_departure: Deploying...",
@@ -127,7 +127,7 @@ jobs:
           update-ts: ${{ steps.slack.outputs.ts }}
           payload: |
             {
-              "text": ":white_check_mark: Deployment finished",
+              "text": ":white_check_mark: ${{ github.repository }} deployment ${{ github.ref_name }} to ${{ inputs.server_url }} finished.",
               "attachments": [
                 {
                   "pretext": ":airplane_arriving: Finished deploying",
@@ -155,7 +155,7 @@ jobs:
           update-ts: ${{ steps.slack.outputs.ts }}
           payload: |
             {
-              "text": ":x: Project deployment failed",
+              "text": ":x: ${{ github.repository }} deployment ${{ github.ref_name }} to ${{ inputs.server_url }} failed!",
               "attachments": [
                 {
                   "pretext": ":fire: Failed to deploy",
