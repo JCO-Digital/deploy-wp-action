@@ -28,8 +28,6 @@ on:
     secrets:
       SSH_GITHUB_KEY:
         required: true
-      SSH_KNOWN_HOSTS:
-        required: true
       SLACK_BOT_TOKEN:
         required: false
 
@@ -77,7 +75,7 @@ jobs:
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
           name: id_ed25519
-          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          known_hosts: ${{ vars.WP_DEPLOY_SSH_HOSTS }}
 
       # This will parse the paths "local:remote,local:remote" and create a matrix of paths to deploy
       # Preceding slashes are added to the remote path if they don't exist
