@@ -130,7 +130,7 @@ jobs:
 
       - name: Add GH Oauth token to Composer
         run: |
-          MERGED_COMPOSER_AUTH=$(jq '. + {"github-oauth":{ "github.com": "${{ steps.composer-token.outputs.token }}" }}' <<< '${{ secrets.COMPOSER_AUTH }}')
+          MERGED_COMPOSER_AUTH=$(jq -c '. + {"github-oauth":{ "github.com": "${{ steps.composer-token.outputs.token }}" }}' <<< '${{ secrets.COMPOSER_AUTH }}')
           echo "COMPOSER_AUTH=$MERGED_COMPOSER_AUTH" >> $GITHUB_ENV
 
       - name: Make
