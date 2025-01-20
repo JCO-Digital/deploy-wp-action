@@ -40,6 +40,8 @@ on:
         required: true
       SLACK_BOT_TOKEN:
         required: false
+      PRIVATE_KEY:
+        required: false
 
 jobs:
   build:
@@ -118,10 +120,21 @@ jobs:
           php-version: ${{ inputs.php_version }}
           tools: composer:${{ inputs.composer_version }}
 
+      - name: Fetch Github token for Composer
+        id: composer-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Add GH Oauth token to Composer
+        run: |
+          MERGED_COMPOSER_AUTH=$(jq '. + {"github-oauth":{ "github.com": "${{ steps.composer-token.outputs.token }}" }}' <<< '${{ env.COMPOSER_AUTH }}')
+          echo "COMPOSER_AUTH=$MERGED_COMPOSER_AUTH" >> $GITHUB_ENV
+
       - name: Make
         run: make ci
-        env:
-          COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
 
       - name: Upload built files
         uses: actions/upload-artifact@v4
