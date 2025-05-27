@@ -40,7 +40,7 @@ jobs:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
         name: Slack notification (start)
-        uses: slackapi/slack-github-action@v2
+        uses: slackapi/slack-github-action@v1
         with:
           # The following message update step does not accept a channel name.
           # Setting a channel ID here for consistency is highly recommended.
@@ -115,7 +115,7 @@ jobs:
         env:
           DEPLOY_PATHS: ${{ env.DEPLOY_PATHS }}
 
-      - uses: slackapi/slack-github-action@v2
+      - uses: slackapi/slack-github-action@v1
         name: Slack notification (success)
         if: ${{ success() && inputs.slack_channel != '' }}
         with:
@@ -143,7 +143,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - uses: slackapi/slack-github-action@v2
+      - uses: slackapi/slack-github-action@v1
         name: Slack notification (failure)
         if: ${{ failure() && inputs.slack_channel != '' }}
         with:
