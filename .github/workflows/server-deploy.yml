@@ -25,6 +25,11 @@ on:
         description: "Slack channel ID to post notifications to"
         default: ""
         type: string
+      ssh_port:
+        description: "SSH port"
+        default: 22
+        type: number
+
     secrets:
       SSH_GITHUB_KEY:
         required: true
