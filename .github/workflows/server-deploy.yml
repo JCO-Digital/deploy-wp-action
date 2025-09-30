@@ -115,10 +115,11 @@ jobs:
           for path in $DEPLOY_PATHS; do
             IFS=':' read -r -a path <<< "$path";
             echo "Deploying ${path[0]} to ${path[1]}";
-            rsync -rlci --verbose --delete --exclude=${{ env.EXCLUDE }} ${path[0]} ${{ env.SERVER_URL }}${path[1]};
+            rsync -rlci -e "ssh -p ${{ env.SSH_PORT }}" --verbose --delete --exclude=${{ env.EXCLUDE }} ${path[0]} ${{ env.SERVER_URL }}${path[1]};
           done;
         env:
           DEPLOY_PATHS: ${{ env.DEPLOY_PATHS }}
+          SSH_PORT: ${{ inputs.ssh_port }}
 
       - uses: slackapi/slack-github-action@v1
         name: Slack notification (success)
