@@ -9,17 +9,13 @@ on:
         description: "Node version to use"
         default: "20"
         type: string
-      is_jcore2:
-        description: "Is JCORE2 theme"
-        default: false
-        type: boolean
       composer_version:
         description: "Composer version"
         default: "v2"
         type: string
       fetch_submodules:
         description: "Should submodules be fetched"
-        default: false
+        default: true
         type: boolean
       platform:
         description: "What platform should the action run on"
@@ -73,10 +69,6 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - uses: actions/checkout@v4
-        with:
-          submodules: ${{ inputs.fetch_submodules && ! inputs.is_jcore2 }}
-
       - name: Fetch Github token for Composer
         id: composer-token
         uses: actions/create-github-app-token@v1
@@ -85,9 +77,10 @@ jobs:
           private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Fetch submodules
-        if: ${{ inputs.is_jcore2 }}
-        run: git submodule update --init --recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.fetch_submodules }}
+          token: ${{ steps.composer-token.outputs.token }}
 
       - uses: actions/setup-node@v4
         with:
