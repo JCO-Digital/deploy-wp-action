@@ -34,7 +34,7 @@ on:
         default: ""
         type: string
     secrets:
-      SSH_GITHUB_KEY:
+      JCORE_DEPLOY_KEY:
         required: true
       COMPOSER_AUTH:
         required: true
@@ -79,17 +79,17 @@ jobs:
         with:
           submodules: ${{ inputs.fetch_submodules && ! inputs.is_jcore2 }}
 
-      - name: Add Bitbucket Known Hosts
+      - name: Add Github Known Hosts
         if: ${{ inputs.is_jcore2 }}
-        run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
+        run: echo GITHUB_KNOWN_HOSTS="$(ssh-keyscan -t rsa github.com)" >> $GITHUB_ENV
 
-      - name: Install Bitbucket Key
+      - name: Install Github Key
         if: ${{ inputs.is_jcore2 }}
         uses: shimataro/ssh-key-action@v2
         with:
-          key: ${{ secrets.SSH_GITHUB_KEY }}
+          key: ${{ secrets.JCORE_DEPLOY_KEY }}
           name: id_ed25519
-          known_hosts: ${{ env.BITBUCKET_KNOWN_HOSTS }}
+          known_hosts: ${{ env.GITHUB_KNOWN_HOSTS }}
 
       - name: Fetch submodules
         if: ${{ inputs.is_jcore2 }}
