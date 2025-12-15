@@ -1,6 +1,6 @@
 {
   "name": "deploy-wp-action",
-  "version": "3.4.0",
+  "version": "4.0.0",
   "author": "JCO Digital <developer@jco.fi>",
   "scripts": {
     "postversion": "git push && git push --tags"
