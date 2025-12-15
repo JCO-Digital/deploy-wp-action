@@ -34,8 +34,6 @@ on:
         default: ""
         type: string
     secrets:
-      JCORE_DEPLOY_KEY:
-        required: true
       COMPOSER_AUTH:
         required: true
       SLACK_BOT_TOKEN:
@@ -79,17 +77,13 @@ jobs:
         with:
           submodules: ${{ inputs.fetch_submodules && ! inputs.is_jcore2 }}
 
-      - name: Add Github Known Hosts
-        if: ${{ inputs.is_jcore2 }}
-        run: echo GITHUB_KNOWN_HOSTS="$(ssh-keyscan -t rsa github.com)" >> $GITHUB_ENV
-
-      - name: Install Github Key
-        if: ${{ inputs.is_jcore2 }}
-        uses: shimataro/ssh-key-action@v2
+      - name: Fetch Github token for Composer
+        id: composer-token
+        uses: actions/create-github-app-token@v1
         with:
-          key: ${{ secrets.JCORE_DEPLOY_KEY }}
-          name: id_ed25519
-          known_hosts: ${{ env.GITHUB_KNOWN_HOSTS }}
+          app-id: ${{ vars.TOKEN_APP_ID }}
+          private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Fetch submodules
         if: ${{ inputs.is_jcore2 }}
@@ -119,14 +113,6 @@ jobs:
         with:
           php-version: ${{ inputs.php_version }}
           tools: composer:${{ inputs.composer_version }}
-
-      - name: Fetch Github token for Composer
-        id: composer-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.TOKEN_APP_ID }}
-          private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
 
       - name: Add GH Oauth token to Composer
         run: |
