@@ -17,6 +17,10 @@ on:
         description: "Should submodules be fetched"
         default: true
         type: boolean
+      use_npm_token:
+        description: "Should NPM token be used"
+        default: false
+        type: boolean
       platform:
         description: "What platform should the action run on"
         default: "ubuntu-latest"
@@ -35,6 +39,8 @@ on:
       SLACK_BOT_TOKEN:
         required: false
       PRIVATE_KEY:
+        required: false
+      BUILD_NPM_TOKEN:
         required: false
 
 jobs:
@@ -116,6 +122,11 @@ jobs:
         run: |
           pnpm config set @fortawesome:registry=https://npm.fontawesome.com/
           pnpm config set //npm.fontawesome.com/:_authToken=${{ secrets.FONT_AWESOME_PRO_TOKEN }}
+
+      - name: Set NPM token
+        if: ${{ inputs.use_npm_token }}
+        run: |
+          pnpm config set //registry.npmjs.org/:_authToken=${{ secrets.BUILD_NPM_TOKEN }}
 
       - name: Make
         run: make ci
