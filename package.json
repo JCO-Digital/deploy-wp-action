@@ -1,6 +1,6 @@
 {
   "name": "deploy-wp-action",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "author": "JCO Digital <developer@jco.fi>",
   "scripts": {
     "preversion": "pnpm run check-yaml",
