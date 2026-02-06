@@ -9,16 +9,16 @@ on:
         description: "Node version to use"
         default: "20"
         type: string
-      is_jcore2:
-        description: "Is JCORE2 theme"
-        default: false
-        type: boolean
       composer_version:
         description: "Composer version"
         default: "v2"
         type: string
       fetch_submodules:
         description: "Should submodules be fetched"
+        default: true
+        type: boolean
+      use_npm_token:
+        description: "Should NPM token be used"
         default: false
         type: boolean
       platform:
@@ -34,13 +34,13 @@ on:
         default: ""
         type: string
     secrets:
-      SSH_GITHUB_KEY:
-        required: true
       COMPOSER_AUTH:
         required: true
       SLACK_BOT_TOKEN:
         required: false
       PRIVATE_KEY:
+        required: false
+      BUILD_NPM_TOKEN:
         required: false
 
 jobs:
@@ -75,25 +75,18 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
+      - name: Fetch Github token for Composer
+        id: composer-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.TOKEN_APP_ID }}
+          private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v4
         with:
-          submodules: ${{ inputs.fetch_submodules && ! inputs.is_jcore2 }}
-
-      - name: Add Bitbucket Known Hosts
-        if: ${{ inputs.is_jcore2 }}
-        run: echo BITBUCKET_KNOWN_HOSTS="$(ssh-keyscan -t rsa bitbucket.org)" >> $GITHUB_ENV
-
-      - name: Install Bitbucket Key
-        if: ${{ inputs.is_jcore2 }}
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_GITHUB_KEY }}
-          name: id_ed25519
-          known_hosts: ${{ env.BITBUCKET_KNOWN_HOSTS }}
-
-      - name: Fetch submodules
-        if: ${{ inputs.is_jcore2 }}
-        run: git submodule update --init --recursive
+          submodules: ${{ inputs.fetch_submodules }}
+          token: ${{ steps.composer-token.outputs.token }}
 
       - uses: actions/setup-node@v4
         with:
@@ -120,14 +113,6 @@ jobs:
           php-version: ${{ inputs.php_version }}
           tools: composer:${{ inputs.composer_version }}
 
-      - name: Fetch Github token for Composer
-        id: composer-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.TOKEN_APP_ID }}
-          private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
       - name: Add GH Oauth token to Composer
         run: |
           MERGED_COMPOSER_AUTH=$(jq -c '. + {"github-oauth":{ "github.com": "${{ steps.composer-token.outputs.token }}" }}' <<< '${{ secrets.COMPOSER_AUTH }}')
@@ -142,6 +127,11 @@ jobs:
         if: ${{ steps.composer-token.outputs.token != '' && vars.ENABLE_GITHUB_NPM_AUTH == 'true' }}
         run: |
           git config --global url."https://x-access-token:${{ steps.composer-token.outputs.token }}@github.com/".insteadOf "git@github.com:"
+
+      - name: Set NPM token
+        if: ${{ inputs.use_npm_token }}
+        run: |
+          pnpm config set //registry.npmjs.org/:_authToken=${{ secrets.BUILD_NPM_TOKEN }}
 
       - name: Make
         run: make ci
