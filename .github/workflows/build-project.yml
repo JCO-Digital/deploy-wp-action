@@ -115,7 +115,16 @@ jobs:
 
       - name: Add GH Oauth token to Composer
         run: |
-          MERGED_COMPOSER_AUTH=$(jq -c '. + {"github-oauth":{ "github.com": "${{ steps.composer-token.outputs.token }}" }}' <<< '${{ secrets.COMPOSER_AUTH }}')
+          SITE_URL="${{ vars.SITE_URL }}"
+          if [ -z "$SITE_URL" ]; then
+            SITE_URL="https://jco.fi"
+          fi
+          MERGED_COMPOSER_AUTH=$(jq -c \
+            --arg gh_token "${{ steps.composer-token.outputs.token }}" \
+            --arg old_url "https://jco.fi" \
+            --arg new_url "$SITE_URL" \
+            'walk(if type == "string" then gsub($old_url; $new_url) else . end) | . + {"github-oauth":{"github.com": $gh_token}}' \
+            <<< '${{ secrets.COMPOSER_AUTH }}')
           echo "COMPOSER_AUTH=$MERGED_COMPOSER_AUTH" >> $GITHUB_ENV
 
       - name: Set Font Awesome Pro Token
