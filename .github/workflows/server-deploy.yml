@@ -82,22 +82,58 @@ jobs:
           name: id_ed25519
           known_hosts: ${{ vars.WP_DEPLOY_SSH_HOSTS }}
 
-      # This will parse the paths "local:remote,local:remote" and create a matrix of paths to deploy
-      # Preceding slashes are added to the remote path if they don't exist
+      # This will parse the paths "local:remote,local" and create a list of paths to deploy.
+      # If only local is provided, remote will be the same as local.
+      # Preceding slashes are added to the remote path if they don't exist.
+      # Fails if the format is incorrect to prevent overwriting the remote root.
       - name: Parse paths
         id: parse-paths
+        env:
+          INPUT_PATHS: ${{ inputs.paths }}
         run: |
-          IFS=',' read -r -a paths <<< "${{ inputs.paths }}";
-          for path in "${paths[@]}"; do
-            IFS=':' read -r -a path <<< "$path";
-            if [[ ${path[1]} != /* ]]; then
-              path[1]="/${path[1]}"
+          IFS=',' read -r -a input_paths <<< "$INPUT_PATHS";
+          final_paths=()
+          for p in "${input_paths[@]}"; do
+            # Trim whitespace from the segment
+            p=$(printf "%s" "$p" | xargs)
+            [[ -z "$p" ]] && continue
+
+            if [[ "$p" == *":"* ]]; then
+              IFS=':' read -r -a parts <<< "$p";
+              if [[ ${#parts[@]} -ne 2 ]]; then
+                printf "::error::Invalid path format: '%s'. Expected 'local:remote' or 'local'.\n" "$p"
+                exit 1
+              fi
+              local_p=$(printf "%s" "${parts[0]}" | xargs)
+              remote_p=$(printf "%s" "${parts[1]}" | xargs)
+            else
+              local_p="$p"
+              remote_p="$p"
             fi
-            if [[ ${path[0]} == /* ]]; then
-              path[0]="${path[0]#*/}"
+
+            if [[ -z "$local_p" ]]; then
+              printf "::error::Local path cannot be empty in '%s'.\n" "$p"
+              exit 1
             fi
-            final_paths+=("${path[0]}:${path[1]}")
+            if [[ -z "$remote_p" ]]; then
+              printf "::error::Remote path cannot be empty in '%s'. If you want to use the local path as remote, just omit the colon.\n" "$p"
+              exit 1
+            fi
+
+            # Normalize local path: remove leading slash
+            local_p="${local_p#/}"
+            # Normalize remote path: ensure leading slash
+            if [[ "$remote_p" != /* ]]; then
+              remote_p="/$remote_p"
+            fi
+
+            final_paths+=("$local_p:$remote_p")
           done
+
+          if [[ ${#final_paths[@]} -eq 0 ]]; then
+            printf "::error::No valid paths found in '%s'.\n" "$INPUT_PATHS"
+            exit 1
+          fi
           echo "DEPLOY_PATHS=${final_paths[*]}" >> $GITHUB_ENV
 
       # We need to set the server url to the base path
