@@ -7,7 +7,7 @@ on:
         type: string
       node_version:
         description: "Node version to use"
-        default: "20"
+        default: "24"
         type: string
       composer_version:
         description: "Composer version"
