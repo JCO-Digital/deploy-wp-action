@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       exclude:
-        default: "{'node_modules','.git','.github','.env','.idea','.vscode','.DS_Store'}"
+        default: "{'node_modules','__pycache__','.venv','.git','.github','.env','.idea','.vscode','.DS_Store'}"
         type: string
       platform:
         description: "What platform should the action run on"

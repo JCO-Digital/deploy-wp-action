@@ -13,6 +13,18 @@ on:
         description: "Composer version"
         default: "v2"
         type: string
+      use_python:
+        description: "Should Python be set up"
+        default: false
+        type: boolean
+      python_version:
+        description: "Python version to use"
+        default: "3.13"
+        type: string
+      python_requirements:
+        description: "Path to the Python requirements file, installed if it exists"
+        default: "requirements.txt"
+        type: string
       fetch_submodules:
         description: "Should submodules be fetched"
         default: true
@@ -113,6 +125,31 @@ jobs:
           php-version: ${{ inputs.php_version }}
           tools: composer:${{ inputs.composer_version }}
 
+      - name: Check for Python requirements
+        id: python-requirements
+        if: ${{ inputs.use_python }}
+        run: |
+          if [ -f "${{ inputs.python_requirements }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python
+        if: ${{ inputs.use_python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          # setup-python fails on a missing dependency file, so only cache when it exists.
+          cache: ${{ steps.python-requirements.outputs.exists == 'true' && 'pip' || '' }}
+          cache-dependency-path: ${{ inputs.python_requirements }}
+
+      - name: Install Python dependencies
+        if: ${{ inputs.use_python && steps.python-requirements.outputs.exists == 'true' }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r "${{ inputs.python_requirements }}"
+
       - name: Add GH Oauth token to Composer
         run: |
           SITE_URL="${{ vars.SITE_URL }}"
@@ -154,6 +191,8 @@ jobs:
             !node_modules
             !.git*
             !**/node_modules
+            !**/__pycache__
+            !**/.venv
           retention-days: 1
 
       - uses: slackapi/slack-github-action@v1
