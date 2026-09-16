@@ -150,20 +150,24 @@ jobs:
           echo "SERVER_URL=${{ inputs.server_url }}:${base_path}" >> $GITHUB_ENV
 
       - name: Knock on ports
-        if: ${{ secrets.KNOCK_PORTS != '' || secrets.KNOCKD_PORTS != '' }}
+        env:
+          SERVER_URL: ${{ inputs.server_url }}
+          KNOCK_PORTS: ${{ secrets.KNOCK_PORTS }}
+          KNOCKD_PORTS: ${{ secrets.KNOCKD_PORTS }}
         run: |
+          ports="${KNOCK_PORTS:-$KNOCKD_PORTS}"
+          if [ -z "$ports" ]; then
+            echo "No knock ports configured, skipping."
+            exit 0
+          fi
+
           if ! command -v knock >/dev/null 2>&1; then
             sudo apt-get update -qq && sudo apt-get install -y -qq knockd
           fi
           server_host="${SERVER_URL#*@}"
           server_host="${server_host%%:*}"
-          ports="${KNOCK_PORTS:-$KNOCKD_PORTS}"
           ports="${ports//,/ }"
           knock "$server_host" $ports
-        env:
-          SERVER_URL: ${{ inputs.server_url }}
-          KNOCK_PORTS: ${{ secrets.KNOCK_PORTS }}
-          KNOCKD_PORTS: ${{ secrets.KNOCKD_PORTS }}
 
       # We deploy the files defined in the paths
       - name: Deploy files
