@@ -167,7 +167,7 @@ jobs:
           server_host="${SERVER_URL#*@}"
           server_host="${server_host%%:*}"
           ports="${ports//,/ }"
-          knock "$server_host" $ports
+          knock -v -d 100 "$server_host" $ports
 
       # We deploy the files defined in the paths
       - name: Deploy files
