@@ -35,6 +35,10 @@ on:
         required: true
       SLACK_BOT_TOKEN:
         required: false
+      KNOCK_PORTS:
+        required: false
+      KNOCKD_PORTS:
+        required: false
 
 jobs:
   deploy:
@@ -144,6 +148,22 @@ jobs:
           base_path="${{ inputs.base_path }}"
           base_path="${base_path%/}"
           echo "SERVER_URL=${{ inputs.server_url }}:${base_path}" >> $GITHUB_ENV
+
+      - name: Knock on ports
+        if: ${{ secrets.KNOCK_PORTS != '' || secrets.KNOCKD_PORTS != '' }}
+        run: |
+          if ! command -v knock >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq knockd
+          fi
+          server_host="${SERVER_URL#*@}"
+          server_host="${server_host%%:*}"
+          ports="${KNOCK_PORTS:-$KNOCKD_PORTS}"
+          ports="${ports//,/ }"
+          knock "$server_host" $ports
+        env:
+          SERVER_URL: ${{ inputs.server_url }}
+          KNOCK_PORTS: ${{ secrets.KNOCK_PORTS }}
+          KNOCKD_PORTS: ${{ secrets.KNOCKD_PORTS }}
 
       # We deploy the files defined in the paths
       - name: Deploy files
