@@ -161,13 +161,27 @@ jobs:
             exit 0
           fi
 
-          if ! command -v knock >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq knockd
-          fi
           server_host="${SERVER_URL#*@}"
           server_host="${server_host%%:*}"
           ports="${ports//,/ }"
-          knock -v -d 100 "$server_host" $ports
+
+          for item in $ports; do
+            proto="tcp"
+            port="$item"
+            if [[ "$item" == *":"* ]]; then
+              port="${item%%:*}"
+              proto="${item##*:}"
+            fi
+
+            echo "Knocking on $server_host:$port ($proto)..."
+            if [ "$proto" = "udp" ]; then
+              timeout 1 nc -u -z -w 1 "$server_host" "$port" 2>/dev/null || true
+            else
+              timeout 1 nc -z -w 1 "$server_host" "$port" 2>/dev/null || true
+            fi
+            sleep 0.1
+          done
+          sleep 1
 
       # We deploy the files defined in the paths
       - name: Deploy files
