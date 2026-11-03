@@ -7,3 +7,8 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+    # One pull request for all updates instead of one per action.
+    groups:
+      actions:
+        patterns:
+          - "*"
