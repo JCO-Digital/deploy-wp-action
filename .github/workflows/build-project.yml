@@ -167,6 +167,14 @@ jobs:
             --arg new_url "$SITE_URL" \
             'walk(if type == "string" then gsub($old_url; $new_url) else . end) | . + {"github-oauth":{"github.com": $gh_token}}' \
             <<< '${{ secrets.COMPOSER_AUTH }}')
+          # GitHub only hides exact secret values, and the merged value is printed with every later step,
+          # so hide each credential in it (all string values; the hosts are keys) and the whole value.
+          while IFS= read -r value; do
+            if [ -n "$value" ]; then
+              echo "::add-mask::$value"
+            fi
+          done < <(jq -r '.. | strings' <<< "$MERGED_COMPOSER_AUTH")
+          echo "::add-mask::$MERGED_COMPOSER_AUTH"
           echo "COMPOSER_AUTH=$MERGED_COMPOSER_AUTH" >> $GITHUB_ENV
 
       - name: Set Font Awesome Pro Token
