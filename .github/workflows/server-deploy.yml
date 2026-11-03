@@ -29,6 +29,10 @@ on:
         description: "SSH port"
         default: 22
         type: number
+      environment:
+        description: "GitHub environment for the deploy job, e.g. production. Empty for none."
+        default: ""
+        type: string
 
     secrets:
       SSH_GITHUB_KEY:
@@ -43,13 +47,15 @@ on:
 jobs:
   deploy:
     runs-on: ${{ inputs.platform }}
+    # The environment's branch rules and secrets apply when one is set.
+    environment: ${{ inputs.environment }}
     env:
       EXCLUDE: ${{ inputs.exclude }}
     steps:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
         name: Slack notification (start)
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
         with:
           # The following message update step does not accept a channel name.
           # Setting a channel ID here for consistency is highly recommended.
@@ -75,12 +81,12 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Download build files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ inputs.artifact }}
 
       - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3 # v2.8.1
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
           name: id_ed25519
@@ -195,7 +201,7 @@ jobs:
           DEPLOY_PATHS: ${{ env.DEPLOY_PATHS }}
           SSH_PORT: ${{ inputs.ssh_port }}
 
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
         name: Slack notification (success)
         if: ${{ success() && inputs.slack_channel != '' }}
         with:
@@ -223,7 +229,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
         name: Slack notification (failure)
         if: ${{ failure() && inputs.slack_channel != '' }}
         with:

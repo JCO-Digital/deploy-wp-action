@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Actions in the workflows are pinned to commits; this keeps the pins up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

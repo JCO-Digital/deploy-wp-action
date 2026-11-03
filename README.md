@@ -53,3 +53,51 @@ jobs:
 
 `__pycache__` and `.venv` are excluded from the build artifact and from the default rsync excludes in
 `server-deploy.yml`.
+
+## Secrets
+
+`secrets: inherit` gives the shared workflow every organization secret the calling repository can use. Passing only
+the secrets a job needs limits what a change to this repository, or to an action it uses, could reach.
+
+| Workflow            | Secret                   | Needed                                                   |
+|---------------------|--------------------------|----------------------------------------------------------|
+| `build-project.yml` | `COMPOSER_AUTH`          | Always                                                   |
+|                     | `TOKEN_PRIVATE_KEY`      | Always, for the GitHub App token (with `vars.TOKEN_APP_ID`) |
+|                     | `BUILD_NPM_TOKEN`        | With `use_npm_token: true`                               |
+|                     | `FONT_AWESOME_PRO_TOKEN` | When the project installs Font Awesome Pro               |
+|                     | `SLACK_BOT_TOKEN`        | With `slack_channel`                                     |
+| `server-deploy.yml` | `SSH_GITHUB_KEY`         | Always                                                   |
+|                     | `KNOCK_PORTS`            | When the server uses port knocking                       |
+|                     | `SLACK_BOT_TOKEN`        | With `slack_channel`                                     |
+
+```yml
+jobs:
+  build:
+    uses: jco-digital/deploy-wp-action/.github/workflows/build-project.yml@v4
+    secrets:
+      COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+      TOKEN_PRIVATE_KEY: ${{ secrets.TOKEN_PRIVATE_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+```
+
+## Environments
+
+`server-deploy.yml` takes an optional `environment` input, the name of a GitHub environment for the deploy job. The
+environment's deployment branch rules then apply, and its secrets replace secrets with the same name, so for example a
+production-only `SSH_GITHUB_KEY` can be kept in a `production` environment limited to the main branch.
+
+```yml
+  deploy:
+    needs: [build]
+    uses: jco-digital/deploy-wp-action/.github/workflows/server-deploy.yml@v4
+    with:
+      environment: production
+      server_url: site@example.com
+      base_path: files
+      paths: wp-content/themes/site/
+```
+
+## Pinning
+
+The actions used in these workflows are pinned to commits, and Dependabot proposes updates. Callers can pin this
+repository the same way, for example `build-project.yml@<commit> # v4.5.0`.
