@@ -2,35 +2,35 @@ on:
   workflow_call:
     inputs:
       php_version:
-        description: 'PHP version to use'
-        default: '8.2'
+        description: "PHP version to use"
+        default: "8.2"
         type: string
       node_version:
-        description: 'Node version to use'
-        default: '20'
+        description: "Node version to use"
+        default: "20"
         type: string
       deploy_vendor:
-        description: 'Deploy vendor folder'
+        description: "Deploy vendor folder"
         default: true
         type: boolean
       deploy_plugins:
-        description: 'Deploy plugins folder'
+        description: "Deploy plugins folder"
         default: false
         type: boolean
       is_jcore2:
-        description: 'Is JCORE2 theme'
+        description: "Is JCORE2 theme"
         default: false
         type: boolean
       server_url:
-        description: 'Server URL'
+        description: "Server URL"
         required: true
         type: string
       base_path:
-        description: 'Base path'
+        description: "Base path"
         required: true
         type: string
       theme_name:
-        description: 'Theme name'
+        description: "Theme name"
         required: true
         type: string
     secrets:
@@ -48,12 +48,12 @@ jobs:
     env:
       SERVER_URL: ${{ inputs.server_url }}:${{ inputs.base_path }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: false
 
       - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3 # v2.8.1
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
           name: id_ed25519
@@ -65,7 +65,7 @@ jobs:
 
       - name: Install Bitbucket Key
         if: ${{ inputs.is_jcore2 }}
-        uses: shimataro/ssh-key-action@v2
+        uses: shimataro/ssh-key-action@87a8f067114a8ce263df83e9ed5c849953548bc3 # v2.8.1
         with:
           key: ${{ secrets.SSH_GITHUB_KEY }}
           name: id_ed25519_bitbucket
@@ -74,18 +74,18 @@ jobs:
       - name: Fetch submodules
         run: git submodule update --init --recursive
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
         with:
           node-version: ${{ inputs.node_version }}
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@eae0cfeb286e66ffb5155f1a79b90583a127a68b # v2.4.1
 
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
@@ -94,7 +94,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Setup PHP with tools
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ inputs.php_version }}
           tools: composer:v2

@@ -54,6 +54,13 @@ on:
         required: false
       BUILD_NPM_TOKEN:
         required: false
+      # Declared so callers can pass secrets explicitly instead of `secrets: inherit`.
+      TOKEN_PRIVATE_KEY:
+        description: "Private key of the GitHub App that checks out submodules and Composer packages"
+        required: false
+      FONT_AWESOME_PRO_TOKEN:
+        description: "Font Awesome Pro npm token, for projects that use it"
+        required: false
 
 jobs:
   build:
@@ -62,13 +69,13 @@ jobs:
       - id: slack
         if: ${{ inputs.slack_channel != '' }}
         name: Slack notification (start)
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
-          # The following message update step does not accept a channel name.
-          # Setting a channel ID here for consistency is highly recommended.
-          channel-id: ${{ inputs.slack_channel }}
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
           payload: |
             {
+              "channel": "${{ inputs.slack_channel }}",
               "text": ":construction_worker: ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} started.",
               "attachments": [
                 {
@@ -84,34 +91,32 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Fetch Github token for Composer
         id: composer-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ vars.TOKEN_APP_ID }}
           private-key: ${{ secrets.TOKEN_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: ${{ inputs.fetch_submodules }}
           token: ${{ steps.composer-token.outputs.token }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ inputs.node_version }}
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
@@ -120,7 +125,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Setup PHP with tools
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ inputs.php_version }}
           tools: composer:${{ inputs.composer_version }}
@@ -137,7 +142,7 @@ jobs:
 
       - name: Setup Python
         if: ${{ inputs.use_python }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ inputs.python_version }}
           # setup-python fails on a missing dependency file, so only cache when it exists.
@@ -162,6 +167,14 @@ jobs:
             --arg new_url "$SITE_URL" \
             'walk(if type == "string" then gsub($old_url; $new_url) else . end) | . + {"github-oauth":{"github.com": $gh_token}}' \
             <<< '${{ secrets.COMPOSER_AUTH }}')
+          # GitHub only hides exact secret values, and the merged value is printed with every later step,
+          # so hide each credential in it (all string values; the hosts are keys) and the whole value.
+          while IFS= read -r value; do
+            if [ -n "$value" ]; then
+              echo "::add-mask::$value"
+            fi
+          done < <(jq -r '.. | strings' <<< "$MERGED_COMPOSER_AUTH")
+          echo "::add-mask::$MERGED_COMPOSER_AUTH"
           echo "COMPOSER_AUTH=$MERGED_COMPOSER_AUTH" >> $GITHUB_ENV
 
       - name: Set Font Awesome Pro Token
@@ -183,7 +196,7 @@ jobs:
         run: make ci
 
       - name: Upload built files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ inputs.artifact }}
           path: |
@@ -195,16 +208,17 @@ jobs:
             !**/.venv
           retention-days: 1
 
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         name: Slack notification (success)
         if: ${{ success() && inputs.slack_channel != '' }}
         with:
-          # Unlike the step posting a new message, this step does not accept a channel name.
-          # Please use a channel ID, not a name here.
-          channel-id: ${{ inputs.slack_channel }}
-          update-ts: ${{ steps.slack.outputs.ts }}
+          # Updates the start message.
+          method: chat.update
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
           payload: |
             {
+              "channel": "${{ inputs.slack_channel }}",
+              "ts": "${{ steps.slack.outputs.ts }}",
               "text": ":white_check_mark: ${{ github.repository }} build ${{ github.ref_name }} by ${{ github.actor }} finished.",
               "attachments": [
                 {
@@ -220,19 +234,18 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - uses: slackapi/slack-github-action@v1
+      - uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         name: Slack notification (failure)
         if: ${{ failure() && inputs.slack_channel != '' }}
         with:
-          # Unlike the step posting a new message, this step does not accept a channel name.
-          # Please use a channel ID, not a name here.
-          channel-id: ${{ inputs.slack_channel }}
-          update-ts: ${{ steps.slack.outputs.ts }}
+          # Updates the start message.
+          method: chat.update
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
           payload: |
             {
+              "channel": "${{ inputs.slack_channel }}",
+              "ts": "${{ steps.slack.outputs.ts }}",
               "text": ":x: ${{ github.repository }} build ${{ github.ref_name }} started by ${{ github.actor }} failed!",
               "attachments": [
                 {
@@ -248,5 +261,3 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
